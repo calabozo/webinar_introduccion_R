@@ -1,0 +1,134 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+Nos vamos a descargar los datos de FIFA de aquí:
+https://www.kaggle.com/stefanoleone992/fifa-21-complete-player-dataset
+
+```{r}
+df_fifa<-read.csv('players_21.csv')
+df_fifa<-df_fifa[,c('short_name',"dob",'height_cm','weight_kg','nationality','league_rank','overall','value_eur','player_positions')]
+```
+
+
+
+```{r}
+summary(df_fifa)
+```
+
+https://en.wikipedia.org/wiki/Association_football_positions
+
+
+```{r}
+player_positions<-strsplit(df_fifa$player_positions,',')
+lev <- unique(trimws(unlist(strsplit(df_fifa$player_positions,','))))
+player_positions.dummy <- lapply(player_positions, function(x) table(factor(trimws(x), levels=lev)))
+df_fifa_pp<-cbind(df_fifa,do.call(rbind, player_positions.dummy))
+```
+
+
+Vamos a cambiar el formato de algunas columnas
+```{r}
+df_fifa$dob<-as.Date(df_fifa$dob)
+df_fifa$nationality<-factor(df_fifa$nationality)
+```
+
+```{r}
+summary(df_fifa)
+```
+
+Se puede instalar 
+
+```{r}
+library(lubridate)
+df_fifa$month_name<-month(df_fifa$dob, label=TRUE)
+df_fifa$month_num<-month(df_fifa$dob, label=F)
+```
+
+
+
+```{r}
+(cor_fifa<-cor(df_fifa[,c(3,4,6,7,8,11)],use='pairwise.complete.obs'))
+```
+Pero me gustaria verlo de una forma mas grafica:
+```{r}
+library(corrplot)
+corrplot(cor_fifa, type='lower')
+```
+
+Parece que el peso correla bastante bien con la altura. También parece que la columna 'overall' que indica el rendimiento del jugador correla muy bien con su valor en euros. Además estas dos columnas tienen una correlación negativa con el rango de la liga. Lo que significa que los jugadores que tienen un menor rendimiento están en ligas mejors. 
+También vemos una muy ligera correlación positiva entre el peso y la columna 'overall' pero podría ser por casualida.
+
+
+Buscamos los paises con más futbolistas.
+```{r}
+num_futbolistas <- sort(table(df_fifa[,c('nationality')]),decreasing=T)
+num_futbolistas[1:10]
+```
+
+
+
+```{r}
+table(df_fifa[df_fifa$nationality=='Spain' & df_fifa$league_rank==1,"month_name"])
+```
+
+
+```{r}
+table(df_fifa[df_fifa$nationality=='England' & df_fifa$league_rank==1,"month_name"])
+```
+
+
+```{r}
+table(df_fifa[df_fifa$nationality=='Argentina' & df_fifa$league_rank==1,"month_name"])
+```
+
+
+
+
+Esto deberíamos comprobarlo con 
+```{r}
+tbl_num_mes<-table(droplevels(df_fifa[df_fifa$nationality %in% names(num_futbolistas[1:10]) & df_fifa$league_rank==1,c('nationality',"month_name")]))
+tbl_num_mes
+```
+
+
+
+Vamos a compararlo con el número de nacimientos en la población en general extraido de:
+http://data.un.org/Data.aspx?d=POP&f=tableCode%3A55#POP
+
+
+
+```{r}
+df_births <- read.csv('UNdata_birthdays.csv')
+str(df_births)
+```
+
+
+```{r}
+#df_births$Country.or.Area <- factor(df_births$Country.or.Area)
+df_births$Year<-as.numeric(df_births$Year)
+df_births$Area<-factor(df_births$Area)
+df_births$Month<-factor(df_births$Month)
+df_births$Record.Type<-factor(df_births$Record.Type)
+df_births$Reliability<-factor(df_births$Reliability)
+summary(df_births)
+```
+
+
+```{r}
+df_births$Country.or.Area[grepl('United Kingdom',df_births$Country.or.Area)]<-'England'
+df_births$Country.or.Area[grepl('United States',df_births$Country.or.Area)] <-'United States'
+
+```
+
+
+```{r}
+df_births_top_pais <- df_births[df_births$Country.or.Area %in% names(num_futbolistas[1:10]),]
+library(dplyr)
+df_births_top_pais %>% group_by(Country.or.Area,Month) %>% summarise(num=sum(Value))
+summary(df_births_top_pais)
+```
+
+

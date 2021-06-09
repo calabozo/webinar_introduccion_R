@@ -1,0 +1,29 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE7905
+31 tejidos
+3 muestras por tejido
+Análisis de los tejidos: https://bmcbiol.biomedcentral.com/articles/10.1186/1741-7007-6-49
+Platform: ABI Human Genome Survey Microarray Version 2
+
+
+
+https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE1133
+
+
+https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE2361
+36 tejidos
+Platform:  Affymetrix Human Genome U133A Array
+
+
+https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE2193
+123 tejidos
+
+
+Paquete para leer los ficheros:
+https://warwick.ac.uk/fac/sci/moac/people/students/peter_cock/r/geo/
+
+
