@@ -107,28 +107,25 @@ str(df_births)
 
 
 ```{r}
-#df_births$Country.or.Area <- factor(df_births$Country.or.Area)
 df_births$Year<-as.numeric(df_births$Year)
 df_births$Area<-factor(df_births$Area)
 df_births$Month<-factor(df_births$Month)
 df_births$Record.Type<-factor(df_births$Record.Type)
 df_births$Reliability<-factor(df_births$Reliability)
-summary(df_births)
-```
-
-
-```{r}
 df_births$Country.or.Area[grepl('United Kingdom',df_births$Country.or.Area)]<-'England'
 df_births$Country.or.Area[grepl('United States',df_births$Country.or.Area)] <-'United States'
-
-```
-
-
-```{r}
+df_births$Country.or.Area <- factor(df_births$Country.or.Area)
 df_births_top_pais <- df_births[df_births$Country.or.Area %in% names(num_futbolistas[1:10]),]
 library(dplyr)
 df_births_top_pais %>% group_by(Country.or.Area,Month) %>% summarise(num=sum(Value))
 summary(df_births_top_pais)
+```
+
+
+
+
+```{r}
+
 ```
 
 
