@@ -1,65 +1,101 @@
 ---
-title: "R Notebook"
+title: "Introducción R"
 output: html_notebook
 ---
 
+Vamos a empezar a practicar R con un dataset sobre los fubolistas de FIFA 2021. 
 
 Nos vamos a descargar los datos de FIFA de aquí:
 https://www.kaggle.com/stefanoleone992/fifa-21-complete-player-dataset
 
+
+## Carga de datos
+
+En R podemos importar ficheros CSV como un dataframe:
 ```{r}
-df_fifa<-read.csv('players_21.csv')
-df_fifa<-df_fifa[,c('short_name',"dob",'height_cm','weight_kg','nationality','league_rank','overall','value_eur','player_positions')]
+#Importamos el CSV:
+df_fifa<-read.csv('datos/players_21.csv', stringsAsFactors = F)
+# Nos quedamos solo con ciertas columnas del dataset
+df_fifa<-df_fifa[,c('long_name',"dob",'height_cm','weight_kg','nationality','league_rank','overall','value_eur')]
 ```
 
 
-
+Vamos a ver las características del dataframe que hemos importado:
 ```{r}
 summary(df_fifa)
 ```
 
-https://en.wikipedia.org/wiki/Association_football_positions
-
-
+Podemos ver las primeras filas con:
 ```{r}
-player_positions<-strsplit(df_fifa$player_positions,',')
-lev <- unique(trimws(unlist(strsplit(df_fifa$player_positions,','))))
-player_positions.dummy <- lapply(player_positions, function(x) table(factor(trimws(x), levels=lev)))
-df_fifa_pp<-cbind(df_fifa,do.call(rbind, player_positions.dummy))
+head(df_fifa)
+```
+
+O las últimas con tail():
+```{r}
+tail(df_fifa)
 ```
 
 
-Vamos a cambiar el formato de algunas columnas
+También podemos ver las filas o columnas que queramos:
+```{r}
+df_fifa[c(1,2,5,7,10),c('long_name','nationality','league_rank')]
+```
+
+
+## Transformación de datos:
+
+Vamos a cambiar el formato de algunas columnas:
 ```{r}
 df_fifa$dob<-as.Date(df_fifa$dob)
 df_fifa$nationality<-factor(df_fifa$nationality)
 ```
 
+
+Al cambiar la nacionalidad a factor() podemos ver con el `summary()` cuales son las nacionalidades más populales,
+y también podemos ver como se distribuyen las fechas de nacimiento:
 ```{r}
 summary(df_fifa)
 ```
 
-Se puede instalar 
-
+Creamos dos nuevas columnas una con el nombre del mes de nacimiento y otra con el número del mes.
+Para ello usamos la función `month` disponible en la librería `lubridate`. Para instalar esta librería puedes ejecutar el comando `install.packages('lubridate')`:
 ```{r}
 library(lubridate)
 df_fifa$month_name<-month(df_fifa$dob, label=TRUE)
 df_fifa$month_num<-month(df_fifa$dob, label=F)
 ```
 
-
-
+Vemos el resultado:
 ```{r}
-(cor_fifa<-cor(df_fifa[,c(3,4,6,7,8,11)],use='pairwise.complete.obs'))
+summary(df_fifa)
 ```
+
+
+## Analisis exploratorio
+
+Vamos a empezar haciendo diferentes correlaciones entre las variables numéricas:
+```{r}
+(cor_fifa<-cor(df_fifa[,c(3,4,6,7,8,10)],use='pairwise.complete.obs'))
+```
+
+
 Pero me gustaria verlo de una forma mas grafica:
 ```{r}
 library(corrplot)
 corrplot(cor_fifa, type='lower')
 ```
 
-Parece que el peso correla bastante bien con la altura. También parece que la columna 'overall' que indica el rendimiento del jugador correla muy bien con su valor en euros. Además estas dos columnas tienen una correlación negativa con el rango de la liga. Lo que significa que los jugadores que tienen un menor rendimiento están en ligas mejors. 
+Parece que el peso correla bastante bien con la altura. También parece que la columna 'overall' que indica el rendimiento del jugador correla muy bien con su valor en euros. Además estas dos columnas tienen una correlación negativa con el rango de la liga. Lo que significa que los jugadores que tienen un menor rendimiento están en ligas mejores. 
 También vemos una muy ligera correlación positiva entre el peso y la columna 'overall' pero podría ser por casualida.
+
+Buscamos el futbolista con mayor peso:
+```{r}
+df_fifa[which.max(df_fifa$weight_kg),]
+```
+O el más bajo:
+```{r}
+df_fifa[which.min(df_fifa$height_cm),]
+```
 
 
 Buscamos los paises con más futbolistas.
@@ -68,64 +104,88 @@ num_futbolistas <- sort(table(df_fifa[,c('nationality')]),decreasing=T)
 num_futbolistas[1:10]
 ```
 
+## Comparación fecha nacimiento
 
-
+Vamos a ver el mes de nacimiento de los futbolistas españoles:
 ```{r}
-table(df_fifa[df_fifa$nationality=='Spain' & df_fifa$league_rank==1,"month_name"])
+tbl_spain<-table(df_fifa[df_fifa$nationality=='Spain' ,"month_name"])
+tbl_spain
+```
+```{r}
+library(ggplot2)
+df_tbl_spain <- data.frame(tbl_spain)
+ggplot(df_tbl_spain, aes(x=Var1,y=Freq))+geom_col(fill='blue')+xlab('Mes')+ylab('Número')
 ```
 
 
+Podemos hacer lo mismo con Alemania
 ```{r}
-table(df_fifa[df_fifa$nationality=='England' & df_fifa$league_rank==1,"month_name"])
-```
-
-
-```{r}
-table(df_fifa[df_fifa$nationality=='Argentina' & df_fifa$league_rank==1,"month_name"])
-```
-
-
-
-
-Esto deberíamos comprobarlo con 
-```{r}
-tbl_num_mes<-table(droplevels(df_fifa[df_fifa$nationality %in% names(num_futbolistas[1:10]) & df_fifa$league_rank==1,c('nationality',"month_name")]))
-tbl_num_mes
-```
-
-
-
-Vamos a compararlo con el número de nacimientos en la población en general extraido de:
-http://data.un.org/Data.aspx?d=POP&f=tableCode%3A55#POP
-
-
-
-```{r}
-df_births <- read.csv('UNdata_birthdays.csv')
-str(df_births)
-```
-
-
-```{r}
-df_births$Year<-as.numeric(df_births$Year)
-df_births$Area<-factor(df_births$Area)
-df_births$Month<-factor(df_births$Month)
-df_births$Record.Type<-factor(df_births$Record.Type)
-df_births$Reliability<-factor(df_births$Reliability)
-df_births$Country.or.Area[grepl('United Kingdom',df_births$Country.or.Area)]<-'England'
-df_births$Country.or.Area[grepl('United States',df_births$Country.or.Area)] <-'United States'
-df_births$Country.or.Area <- factor(df_births$Country.or.Area)
-df_births_top_pais <- df_births[df_births$Country.or.Area %in% names(num_futbolistas[1:10]),]
-library(dplyr)
-df_births_top_pais %>% group_by(Country.or.Area,Month) %>% summarise(num=sum(Value))
-summary(df_births_top_pais)
-```
-
-
-
-
-```{r}
+df_tbl_germany <- data.frame(
+  table(df_fifa[df_fifa$nationality=='Germany',"month_name"]))
+ggplot(df_tbl_germany, aes(x=Var1,y=Freq))+geom_col(fill='blue')+xlab('Mes')+ylab('Número')
 
 ```
 
+Y con inglaterra:
+```{r}
+df_tbl_england <- data.frame(
+  table(df_fifa[df_fifa$nationality=='England',"month_name"]))
+ggplot(df_tbl_england, aes(x=Var1,y=Freq))+geom_col(fill='blue')+xlab('Mes')+ylab('Número')
+```
 
+
+¿Esta diferencia que vemos es estadísticamente significativa o puede haber ocurrido por pura casualidad?
+Para responder a esta pregunta tenemos los tests estadísticos.
+Podemos suponer que en condiciones "ideales" la probabilidad de nacer en cada mes es la misma, es decir, deberíamos esperar que todos los futbolistas se distribuyeran de forma uniforme.
+Esto lo podemos verificar con el test chi.sq:
+```{r}
+chisq.test(tbl_spain)
+```
+Como el pvalor es tan bajo podemos descartar la hipótesis nula (todos los meses tienen la misma probabilidad de nacimiento) y aceptar la hipótesis alternativa (hay meses que tienen una mayor probabilidad de nacimientos que otros).
+
+
+## Distribución de nacimientos población total
+
+Vamos a comprobar la distribución de nacimientos de fubolistas con los de la población en general.
+Para ello nos ayudaremos de los datos que publica la ONU y de una función de ayuda que hemos escrito y se encuentra en el fichero `utils_nacimientos.R`:
+```{r}
+source('utils_nacimientos.R')
+```
+
+Vamos ejecutarla la función de prueba:
+```{r}
+get_nacimientos_para_pais('Spain')
+``` 
+
+
+Creamos una función que nos junte la salida de la tabla con los futbolistas y la población general:
+```{r}
+get_table_pais<-function(pais) rbind(
+ fifa=table(df_fifa[df_fifa$nationality==pais,"month_name"]),
+ normal=get_nacimientos_para_pais('Spain')
+ )
+```
+
+Podemos ver la proproción de nacimiento en cada mes. Hay que tener en cuenta que no todos los meses tienen los mismos días, por eso hay meses donde hay menos nacimientos
+```{r}
+prp_spain<-prop.table(get_table_pais('Spain'),margin = 1)
+prp_spain
+```
+
+Podemos "normalizar" y ver la probabilidad por día
+```{r}
+prp_norm_spain<-prp_spain/c(31,28,31,30,31,30,31,31,30,31,30,31)
+prp_norm_spain
+```
+
+Esto podemos pintarlo en un gráfico:
+```{r}
+df_prp_norm_spain<-as.data.frame(t(prp_norm_spain))
+colnames(df_prp_norm_spain)<-c('fifa','normal')
+df_prp_norm_spain$mes <- rownames(df_prp_norm_spain)
+df_prp_norm_spain$mes <-factor(df_prp_norm_spain$mes, levels = c('ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'))
+  
+library(reshape2)
+df<-melt(df_prp_norm_spain)
+ggplot(df,aes(x=mes,y=value,fill=variable))+geom_col(position='dodge')
+```
