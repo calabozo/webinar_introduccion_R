@@ -1,0 +1,123 @@
+---
+title: "Análisis expresión genética"
+output: html_notebook
+---
+
+Vamos a analizar una matriz de expresión genética donde analizamos genes humanos de diferentes órganos.
+
+
+Primero necesitamos intalar BiocManager una librería que nos permitirá instalar paquetes de Bioconductor https://bioconductor.org/
+
+Esto lo haremos igual que intalamos cualquier otro paquete: `install.packages("BiocManager")`
+
+Una vez que tengamos instalado BiocManager podremos instalar las librerias de Bioconductor que necesitamos.
+En nuestro vaso vamos a instalar 'GEOquery', esta librería nos permitirá descargarnos y leer datos de experimentos almacenados en Gene Empression Omnibus: https://www.ncbi.nlm.nih.gov/geo/
+
+```{r}
+BiocManager::install("GEOquery")
+```
+
+Para nuestro análisis vamos a utilizar los datos de: 
+https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE7905
+
+Aquí tenemos 32 tejidos humanos, 3 réplicas de cada tejido (un total de 96 muestras biológicas). Más detalles sobre el estudio en:
+https://bmcbiol.biomedcentral.com/articles/10.1186/1741-7007-6-49
+
+
+```{r}
+library(GEOquery)
+geo_matrix <- getGEO("GSE7905", GSEMatrix=FALSE)
+```
+
+```{r}
+Meta(geo_matrix)
+names(GSMList(geo_matrix))
+Table(GSMList(geo_matrix)[[1]])
+```
+
+https://www.bioconductor.org/packages/release/bioc/vignettes/GEOquery/inst/doc/GEOquery.html
+
+
+
+
+```{r}
+gsmlist<-GSMList(geo_matrix)
+# get the probeset ordering
+probesets <- Table(GPLList(geo_matrix)[[1]])$ID
+# make the data matrix from the VALUE columns from each GSM
+# being careful to match the order of the probesets in the platform
+# with those in the GSMs
+data.matrix <- do.call('cbind',lapply(gsmlist,function(x) 
+                                      {tab <- Table(x)
+                                       mymatch <- match(probesets,tab$ID_REF)
+                                       return(tab$VALUE[mymatch])
+                                     }))
+data.matrix <- apply(data.matrix,2,function(x) {as.numeric(as.character(x))})
+data.matrix <- log2(data.matrix)
+rownames(data.matrix) <- probesets
+
+col_types <- lapply(gsmlist,function(x) Meta(x)$characteristics_ch1)
+```
+
+
+```{r}
+t_df<-data.frame(t(data.matrix))
+model_prepro<-caret::preProcess(t_df, method = c("center", "scale"))
+gene_expr_std<-predict(model_prepro, newdata = t_df)
+```
+
+
+```{r}
+gmatrix<-as.matrix(gene_expr_std)
+rownames(gmatrix)<-unlist(col_types)
+d <- dist(gmatrix,method = "euclidean")
+hc <- hclust(d,method="complete")
+#hc = dendsort(hc)
+
+hcd <- as.dendrogram(hc)
+```
+
+
+
+```{r fig.width=12, fig.height=12,echo=FALSE}
+library(dendextend)
+#labels(hcd)<- unlist(col_types)[order.dendrogram(hcd)]
+hcd<-set(hcd,"labels_cex", 0.7) 
+plot(color_branches(hcd,h=200),horiz=TRUE,cex=1)
+```
+
+
+
+```{r}
+cut(hcd, h = 270)$lower
+```
+
+
+Nos fijamos y buscamos los elementos relativos al cerebro que parecen
+```{r}
+str(cut(hcd, h = 270)$lower[[3]])
+```
+
+
+
+
+
+
+
+```{r}
+library(reshape2)
+library(ggplot2)
+
+df_melt<-melt(data.matrix, measure.vars = colnames(data.matrix0))
+ggplot(df,aes(x=mes,y=value,fill=variable))+geom_col(position='dodge')
+```
+
+
+
+
+
+
+
+
+
+

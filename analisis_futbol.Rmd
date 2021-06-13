@@ -172,7 +172,7 @@ prp_spain<-prop.table(get_table_pais('Spain'),margin = 1)
 prp_spain
 ```
 
-Podemos "normalizar" y ver la probabilidad por día
+Podemos "normalizar" y ver la probabilidad por día:
 ```{r}
 prp_norm_spain<-prp_spain/c(31,28,31,30,31,30,31,31,30,31,30,31)
 prp_norm_spain
@@ -186,6 +186,20 @@ df_prp_norm_spain$mes <- rownames(df_prp_norm_spain)
 df_prp_norm_spain$mes <-factor(df_prp_norm_spain$mes, levels = c('ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'))
   
 library(reshape2)
-df<-melt(df_prp_norm_spain)
+df<-melt(df_prp_norm_spain, id.vars = 'mes', measure.vars = c('fifa','normal'))
 ggplot(df,aes(x=mes,y=value,fill=variable))+geom_col(position='dodge')
+```
+
+
+## Modelando el valor de un futbolista
+
+Podríamos intentar modelar el valor de un futbolista para intentar ver como diferentes variables pueden influir
+```{r}
+model<-lm(df_fifa, formula=value_eur~height_cm+weight_kg+overall+league_rank)
+summary(model)
+```
+
+Incluso podemos sacar su intervalo de confianza:
+```{r}
+confint(model)
 ```
