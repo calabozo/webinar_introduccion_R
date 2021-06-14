@@ -1,0 +1,136 @@
+---
+title: "Análisis expresión genética"
+output: html_notebook
+---
+
+Vamos a analizar una matriz de expresión genética donde analizamos genes humanos de diferentes órganos.
+
+Primero necesitamos intalar BiocManager una librería que nos permitirá instalar paquetes de Bioconductor <https://bioconductor.org/>
+
+Esto lo haremos igual que intalamos cualquier otro paquete: `install.packages("BiocManager")`
+
+Una vez que tengamos instalado BiocManager podremos instalar las librerias de Bioconductor que necesitamos. En nuestro vaso vamos a instalar 'GEOquery', esta librería nos permitirá descargarnos y leer datos de experimentos almacenados en Gene Empression Omnibus: <https://www.ncbi.nlm.nih.gov/geo/>
+
+```{r}
+BiocManager::install("GEOquery")
+```
+
+Para nuestro análisis vamos a utilizar los datos de: <https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE7905>
+
+Aquí tenemos 32 tejidos humanos, 3 réplicas de cada tejido (un total de 96 muestras biológicas). Más detalles sobre el estudio en: <https://bmcbiol.biomedcentral.com/articles/10.1186/1741-7007-6-49>
+
+```{r}
+source('utils_gen_exp.R')
+genexp_data<-download_genexp_data('GSE7905')
+#Podemos guardar los datos para usarlo luego
+saveRDS(genexp_data, file = "genexp_data.rds")
+```
+
+```{r}
+genexp_data <- readRDS("genexp_data.rds")
+genexp<-genexp_data$genexp
+tejidos<-genexp_data$tejidos
+```
+
+```{r}
+dim(genexp)
+```
+
+```{r}
+cat(paste("Tenemos ",nrow(genexp), "muestras con ",ncol(genexp),"probesets\n"))
+cat(paste("Hay un total de ", length(unique(tejidos)), "tejidos diferentes\n"))
+cat("Los tejidos son:\n")
+cat(paste(unique(tejidos),collapse=', '))
+```
+
+Vamos a mostrar una pequeña sección de la matriz de expresión genética, los 10 primeros tejidos y las 5 primeras probesets:
+
+```{r}
+genexp[1:10,1:5]
+```
+
+Un resumen de los primeros 5 probsets:
+
+```{r}
+summary(genexp[,1:5])
+```
+
+Vamos a realizar un ejercicio de clusterización.
+
+Primero tenemos que estandarizar los datos, para que todos los genes (probesets) sean comparables:
+
+```{r}
+model_prepro<-caret::preProcess(genexp, method = c("center", "scale"))
+gene_expr_std<-predict(model_prepro, newdata = genexp)
+```
+
+Un resumen de los primeros 5 probsets estandarizados:
+
+```{r}
+summary(gene_expr_std[,1:5])
+```
+
+Ahora vamos a hacer una clusterización jerárquica:
+
+```{r}
+gmatrix<-as.matrix(gene_expr_std)
+rownames(gmatrix)<-tejidos
+d <- dist(gmatrix,method = "euclidean")
+hc <- hclust(d,method="complete")
+hcd <- as.dendrogram(hc)
+```
+
+```{r fig.width=14, fig.height=8,echo=FALSE}
+plot(hc)
+```
+No acaba de coincidir con el del estudio:
+https://bmcbiol.biomedcentral.com/articles/10.1186/1741-7007-6-49
+Ni con este estudio:
+https://royalsocietypublishing.org/doi/10.1098/rsob.200322
+pero la forma en la que definimos la distancia influye mucho.
+
+
+Vamos a establecer un punto de corte en 270 y extraer diferentes clusters:
+```{r}
+cut(hcd, h = 270)$lower
+```
+
+Nos fijamos y buscamos los elementos relativos al cerebro que parecen
+
+```{r}
+str(cut(hcd, h = 270)$lower[[3]])
+```
+
+Vamos a comparar las muestras del cerebro y el pancreas:
+```{r}
+gene_expr_std_brain<-colMeans(gene_expr_std[grepl('brain',tejidos),])
+gene_expr_std_pancreas<-colMeans(gene_expr_std[grepl('pancreas',tejidos),])
+```
+
+Podemos ver como se distribuyen esta diferencia de genes:
+```{r}
+genexp_diff<-gene_expr_std_brain-gene_expr_std_pancreas
+hist(genexp_diff)
+```
+
+```{r}
+genexp_diff<-sort(genexp_diff,decreasing = T)
+head(genexp_diff)
+tail(genexp_diff)
+```
+
+
+Para saber a que genes se corresponde ese probeset tenemos que descargarnos información
+del microarray disponible en: https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GPL2986.
+Lo hacemos con una función muy simple:
+```{r}
+gen_info<-download_probeset_data()
+```
+
+
+```{r}
+gen_info[gen_info$ID=='137970',c('GeneID','Gene Symbol','Gene Name')]
+```
+Podemos buscar información de los genes en:
+https://www.ncbi.nlm.nih.gov/gene/
+

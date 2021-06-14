@@ -21,7 +21,7 @@ N<- 45
 t_max <- 20
 
 
-TURN_USER <- "User"
+TURN_USER <- "Usuario"
 TURN_IA <- "IA"
 
 # Definimos el objeto UI. 
@@ -76,10 +76,10 @@ plot_canvas <- function(min_x_canvas,max_x_canvas,min_y_canvas,max_y_canvas){
   ggplot(df_canvas,
          aes(x=x,y=y))+geom_line(y=min_y_canvas)+geom_line(alpha=0)+coord_fixed()
 }
-plot_ball <- function(g,ball_pos,angle){
-  g+geom_point(x=ball_pos["x"],y=ball_pos["y"],size=radius,color='red')+
+plot_ball <- function(g,ball_pos,angle, color='red'){
+  g+geom_point(x=ball_pos["x"],y=ball_pos["y"],size=radius,color=color)+
     geom_segment(x=ball_pos["x"],y=ball_pos["y"],
-                 xend=ball_pos["x"]+radius*cos(angle),yend=ball_pos["y"]+radius*sin(angle),color='red', size=2)
+                 xend=ball_pos["x"]+radius*cos(angle),yend=ball_pos["y"]+radius*sin(angle),color=color, size=2)
 }
 
 plot_shot <- function(g,df_shot){
@@ -117,6 +117,9 @@ server <- function(input, output, session) {
     print("plot")
     angle_rads <- pi/180*input$angle
     g<-plot_canvas(min_x_canvas,max_y_canvas,min_y_canvas,max_y_canvas) 
+    txt_end <- NULL
+    color1 <- 'green'
+    color2 <- 'green'
     if (input$shot>num_shots){
       num_shots<<- as.numeric(input$shot)
       print(paste("Has disparado", num_shots,"veces"))
@@ -124,7 +127,8 @@ server <- function(input, output, session) {
         turn <<- TURN_IA
         df_shot<-calc_shot(balls_pos[[1]],angle_rads,input$strength)
         if (target_destroyed(df_shot, balls_pos[[2]])){
-          print("Has dado en el blanco!")
+          txt_end <- "Has dado en el blanco!"
+          color2<-'red'
         }
       }else{
         turn <<- TURN_USER
@@ -132,15 +136,26 @@ server <- function(input, output, session) {
         strenght <- runif(1,min = min_strength, max_strength)
         df_shot<-calc_shot(balls_pos[[2]],angle_rads2,strenght)
         if (target_destroyed(df_shot, balls_pos[[1]])){
-          print("Te ha dado")
+          txt_end <- "Te han dado, skynet se despierta!"
+          color1<-'red'
         }
       }
+      output$txt_out<-renderText({paste("Turno ",turn)})  
       
       g <- g %>% plot_shot(df_shot) 
     }
-    g %>% plot_ball(balls_pos[[1]],angle_rads) %>% 
-      plot_ball(balls_pos[[2]],angle_rads2) 
+    
+    g <- g %>% plot_ball(balls_pos[[1]],angle_rads,color1) %>% 
+               plot_ball(balls_pos[[2]],angle_rads2,color2) 
+    
+    if (!is.null(txt_end)){
+      balls_pos <<- calc_initial_positions(min_x_canvas, max_x_canvas, y_val=0)
+      output$txt_out<-renderText({txt_end})  
+    }
+    return(g)
   })
+  
+  
   
 }
 

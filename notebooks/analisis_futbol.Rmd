@@ -106,6 +106,8 @@ num_futbolistas[1:10]
 
 ## Comparación fecha nacimiento
 
+Estudio realizado en: https://elpais.com/politica/2021/05/21/actualidad/1621607530_882697.html
+
 Vamos a ver el mes de nacimiento de los futbolistas españoles:
 ```{r}
 tbl_spain<-table(df_fifa[df_fifa$nationality=='Spain' ,"month_name"])
@@ -166,13 +168,13 @@ get_table_pais<-function(pais) rbind(
  )
 ```
 
-Podemos ver la proproción de nacimiento en cada mes. Hay que tener en cuenta que no todos los meses tienen los mismos días, por eso hay meses donde hay menos nacimientos
+Podemos ver la propoción de nacimiento en cada mes. Hay que tener en cuenta que no todos los meses tienen los mismos días, por eso hay meses donde hay menos nacimientos
 ```{r}
 prp_spain<-prop.table(get_table_pais('Spain'),margin = 1)
 prp_spain
 ```
 
-Podemos "normalizar" y ver la probabilidad por día:
+Podemos normalizar y ver la probabilidad por día:
 ```{r}
 prp_norm_spain<-prp_spain/c(31,28,31,30,31,30,31,31,30,31,30,31)
 prp_norm_spain
