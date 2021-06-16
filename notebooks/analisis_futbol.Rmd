@@ -42,6 +42,7 @@ df_fifa[c(1,2,5,7,10),c('long_name','nationality','league_rank')]
 ```
 
 
+
 ## Transformación de datos:
 
 Vamos a cambiar el formato de algunas columnas:
@@ -88,6 +89,14 @@ corrplot(cor_fifa, type='lower')
 Parece que el peso correla bastante bien con la altura. También parece que la columna 'overall' que indica el rendimiento del jugador correla muy bien con su valor en euros. Además estas dos columnas tienen una correlación negativa con el rango de la liga. Lo que significa que los jugadores que tienen un menor rendimiento están en ligas mejores. 
 También vemos una muy ligera correlación positiva entre el peso y la columna 'overall' pero podría ser por casualida.
 
+Podemos pintar la relación entre el peso y la altura de un futbolista:
+```{r}
+#plot(df_fifa$weight_kg,df_fifa$height_cm,xlab='Peso',ylab='Altura[cm]')
+
+#library(ggplot2)
+#ggplot(df_fifa,aes(x=weight_kg,y=height_cm))+geom_point(color='#7788AA')+geom_smooth(method='lm', formula=y~x)
+```
+
 Buscamos el futbolista con mayor peso:
 ```{r}
 df_fifa[which.max(df_fifa$weight_kg),]
@@ -100,9 +109,29 @@ df_fifa[which.min(df_fifa$height_cm),]
 
 Buscamos los paises con más futbolistas.
 ```{r}
-num_futbolistas <- sort(table(df_fifa[,c('nationality')]),decreasing=T)
+num_futbolistas <- sort(table(df_fifa$nationality),decreasing=T)
 num_futbolistas[1:10]
 ```
+
+
+
+Hemos visto que la media ya la mediana de 'overall' es muy parecida, en cambio la media y la mediana de 'value_eur' no lo es:
+```{r}
+paste("La media de overall es", mean(df_fifa$overall,na.rm=T))
+paste("La mediana de overall es", median(df_fifa$overall,na.rm=T))
+paste("La media de value_eur es", mean(df_fifa$value_eur,na.rm=T))
+paste("La media de value_eur es", median(df_fifa$value_eur,na.rm=T))
+```
+
+Vamos a ver como son las distribuciones
+```{r}
+hist(df_fifa$overall)
+```
+
+```{r}
+hist(df_fifa$value_eur/1e6)
+```
+
 
 ## Comparación fecha nacimiento
 
@@ -113,7 +142,7 @@ Vamos a ver el mes de nacimiento de los futbolistas españoles:
 tbl_spain<-table(df_fifa[df_fifa$nationality=='Spain' ,"month_name"])
 tbl_spain
 ```
-```{r}
+```{r ,fig.width=4, fig.height=2,echo=FALSE}
 library(ggplot2)
 df_tbl_spain <- data.frame(tbl_spain)
 ggplot(df_tbl_spain, aes(x=Var1,y=Freq))+geom_col(fill='blue')+xlab('Mes')+ylab('Número')
@@ -121,7 +150,7 @@ ggplot(df_tbl_spain, aes(x=Var1,y=Freq))+geom_col(fill='blue')+xlab('Mes')+ylab(
 
 
 Podemos hacer lo mismo con Alemania
-```{r}
+```{r,fig.width=4, fig.height=2,echo=FALSE}
 df_tbl_germany <- data.frame(
   table(df_fifa[df_fifa$nationality=='Germany',"month_name"]))
 ggplot(df_tbl_germany, aes(x=Var1,y=Freq))+geom_col(fill='blue')+xlab('Mes')+ylab('Número')
@@ -129,7 +158,7 @@ ggplot(df_tbl_germany, aes(x=Var1,y=Freq))+geom_col(fill='blue')+xlab('Mes')+yla
 ```
 
 Y con inglaterra:
-```{r}
+```{r,fig.width=4, fig.height=2,echo=FALSE}
 df_tbl_england <- data.frame(
   table(df_fifa[df_fifa$nationality=='England',"month_name"]))
 ggplot(df_tbl_england, aes(x=Var1,y=Freq))+geom_col(fill='blue')+xlab('Mes')+ylab('Número')
@@ -168,7 +197,7 @@ get_table_pais<-function(pais) rbind(
  )
 ```
 
-Podemos ver la propoción de nacimiento en cada mes. Hay que tener en cuenta que no todos los meses tienen los mismos días, por eso hay meses donde hay menos nacimientos
+Podemos ver la proporción de nacimiento en cada mes. Hay que tener en cuenta que no todos los meses tienen los mismos días, por eso hay meses donde hay menos nacimientos
 ```{r}
 prp_spain<-prop.table(get_table_pais('Spain'),margin = 1)
 prp_spain

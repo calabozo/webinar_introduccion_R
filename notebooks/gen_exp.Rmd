@@ -11,7 +11,8 @@ Esto lo haremos igual que intalamos cualquier otro paquete: `install.packages("B
 
 Una vez que tengamos instalado BiocManager podremos instalar las librerias de Bioconductor que necesitamos. En nuestro vaso vamos a instalar 'GEOquery', esta librería nos permitirá descargarnos y leer datos de experimentos almacenados en Gene Empression Omnibus: <https://www.ncbi.nlm.nih.gov/geo/>
 
-```{r}
+```{r eval = FALSE}
+install.packages("BiocManager")
 BiocManager::install("GEOquery")
 ```
 
